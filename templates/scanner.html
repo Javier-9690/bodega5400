@@ -4,7 +4,7 @@
     <div>
         <p class="eyebrow">▣ Pistoleo operativo</p>
         <h1>Pistolear productos</h1>
-        <p class="subtitle">Escanea el código del producto para registrar ingresos o egresos automáticamente.</p>
+        <p class="subtitle">Escanea el código para registrar ingresos o egresos. Cada movimiento queda asociado a un operador.</p>
     </div>
     <div class="scanner-summary">
         <div>
@@ -51,14 +51,31 @@
                 <label>Cantidad por pistoleo
                     <input id="scannerQuantity" name="cantidad" type="number" min="1" step="1" value="1" required>
                 </label>
-                <label>Responsable / turno
-                    <input id="scannerResponsible" name="responsable" placeholder="Ej: Turno A / Juan Pérez">
+                <label>Operador del servicio
+                    <select id="scannerOperator" name="operator_id">
+                        <option value="">Seleccionar operador</option>
+                        {% for operador in operadores %}
+                            <option value="{{ operador.id }}">{{ operador.etiqueta }}</option>
+                        {% endfor %}
+                    </select>
                 </label>
             </div>
 
-            <label>Observación opcional
-                <input id="scannerObservation" name="observacion" placeholder="Ej: entrega a área, reposición, OT, vale interno">
-            </label>
+            <div class="two-cols scanner-options">
+                <label>Responsable manual / respaldo
+                    <input id="scannerResponsible" name="responsable" placeholder="Usar solo si el operador no está creado">
+                </label>
+                <label>Observación opcional
+                    <input id="scannerObservation" name="observacion" placeholder="Ej: entrega a área, reposición, OT, vale interno">
+                </label>
+            </div>
+
+            {% if not operadores %}
+                <div class="muted-box warning-box">
+                    No hay operadores activos. Puedes escribir un responsable manual, pero se recomienda crear operadores para trazabilidad.
+                    <a href="{{ url_for('operators') }}">Crear operadores</a>
+                </div>
+            {% endif %}
         </form>
     </article>
 
@@ -70,37 +87,43 @@
             <strong>Esperando lectura</strong>
             <p>Pistolea un código para validar el producto y registrar el movimiento.</p>
         </div>
+        <div class="scanner-help">
+            <h3>Reglas de control</h3>
+            <ul>
+                <li>Ingreso suma stock.</li>
+                <li>Egreso descuenta stock.</li>
+                <li>No permite egresar más de lo disponible.</li>
+                <li>El operador queda guardado en movimientos y CSV.</li>
+            </ul>
+        </div>
     </aside>
 </section>
 
 <section class="panel scanner-history-panel">
     <div class="panel-header">
         <div>
-            <p class="eyebrow">Trazabilidad</p>
-            <h2>Últimos pistoleos de esta sesión</h2>
+            <p class="eyebrow">Sesión actual</p>
+            <h2>Historial de pistoleos</h2>
         </div>
-        <button class="btn outline-green" type="button" id="clearScannerHistory">Limpiar lista</button>
+        <button class="btn outline-green" type="button" id="clearScannerHistory">Limpiar historial local</button>
     </div>
-
     <div class="table-wrap">
         <table class="scanner-history-table">
             <thead>
                 <tr>
                     <th>Hora</th>
+                    <th>Estado</th>
                     <th>Tipo</th>
                     <th>Código</th>
                     <th>Descripción</th>
-                    <th>Talla</th>
                     <th>Cantidad</th>
-                    <th>Stock previo</th>
                     <th>Stock nuevo</th>
-                    <th>Estado</th>
+                    <th>Operador</th>
+                    <th>Mensaje</th>
                 </tr>
             </thead>
             <tbody id="scannerHistoryBody">
-                <tr>
-                    <td colspan="9" class="empty">Aún no hay pistoleos en esta sesión.</td>
-                </tr>
+                <tr><td colspan="9" class="empty">Aún no hay pistoleos en esta sesión.</td></tr>
             </tbody>
         </table>
     </div>

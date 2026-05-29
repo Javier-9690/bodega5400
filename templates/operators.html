@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero card-soft">
+    <div>
+        <p class="eyebrow">♙ Control de responsables</p>
+        <h1>Operadores del servicio</h1>
+        <p class="subtitle">Registra los operadores para que cada ingreso o egreso quede trazado con responsable.</p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn outline-green" href="{{ url_for('scanner') }}">▣ Ir a pistoleo</a>
+        <a class="btn outline-green" href="{{ url_for('movements') }}">↕ Ver movimientos</a>
+    </div>
+</section>
+
+<section class="grid-layout operators-layout">
+    <article class="panel">
+        <div class="panel-header single">
+            <p class="eyebrow">Nuevo registro</p>
+            <h2>Agregar operador</h2>
+            <p class="subtitle small-subtitle">El nombre del operador se usará en movimientos, dashboard y exportación CSV.</p>
+        </div>
+        <form method="post" action="{{ url_for('operators') }}" class="stack-form">
+            <label>Nombre operador
+                <input name="nombre" placeholder="Ej: Juan Pérez" required>
+            </label>
+            <label>Cargo / rol
+                <input name="cargo" placeholder="Ej: Bodeguero, Supervisor, Turno Mina">
+            </label>
+            <label>Turno / servicio
+                <input name="turno" placeholder="Ej: Turno A, Noche, Día">
+            </label>
+            <button class="btn red full" type="submit">＋ Agregar operador</button>
+        </form>
+    </article>
+
+    <article class="panel panel-wide">
+        <div class="panel-header single">
+            <p class="eyebrow">Operadores activos</p>
+            <h2>Listado de operadores</h2>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cargo</th>
+                        <th>Turno</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for operador in operadores %}
+                    <tr>
+                        <td>{{ operador.nombre }}</td>
+                        <td>{{ operador.cargo or '—' }}</td>
+                        <td>{{ operador.turno or '—' }}</td>
+                        <td><span class="badge ok">activo</span></td>
+                        <td class="actions">
+                            <form method="post" action="{{ url_for('delete_operator', operator_id=operador.id) }}" onsubmit="return confirm('¿Desactivar operador {{ operador.nombre }}? Sus movimientos históricos se conservan.');">
+                                <button class="btn small ghost-red" type="submit">Desactivar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="empty">No hay operadores activos.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if operadores_inactivos %}
+        <div class="inactive-box">
+            <h3>Operadores inactivos</h3>
+            <p class="subtitle small-subtitle">Si agregas nuevamente el mismo nombre, el sistema lo reactivará.</p>
+            <div class="operator-tags">
+                {% for operador in operadores_inactivos %}
+                    <span>{{ operador.nombre }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

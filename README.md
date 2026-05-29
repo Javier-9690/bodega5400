@@ -1,19 +1,63 @@
 # Bodega 5400
 
-Sistema web en Python/Flask para controlar productos activos en bodega, registrar ingresos, registrar egresos y mantener el stock disponible.
+Sistema web en Python/Flask para controlar productos activos en bodega, registrar ingresos, registrar egresos y mantener el stock disponible. Está preparado para desplegarse en Render.com con PostgreSQL.
 
 ## Funcionalidades incluidas
 
 - Dashboard con estética roja/naranja inspirada en la referencia entregada.
 - Logos Aramark y Escondida | BHP integrados en el encabezado.
-- Carga inicial de los productos del cuadro enviado.
+- Dashboard con conclusiones automáticas y gráficos:
+  - Tendencia de ingresos vs egresos de los últimos 14 días.
+  - Stock disponible por familia.
+  - Alertas por stock mínimo y productos sin stock.
+- Carga inicial de productos del cuadro enviado.
 - Alta de nuevos productos activos.
+- Registro de productos por pistoleo del código:
+  - En el formulario de producto, haz clic en **Código** y pistolea.
+  - Si el código ya existe, el sistema muestra el producto y evita duplicarlo.
+  - Si el código está disponible, permite completar los datos y guardarlo.
 - Eliminación lógica de productos activos, conservando historial.
-- Registro de ingresos y egresos por producto.
+- Registro manual de ingresos y egresos por producto.
+- Pistoleo operativo para ingresos o egresos automáticos.
+- Administración de operadores del servicio.
+- Cada ingreso o egreso guarda el operador responsable.
 - Validación para impedir egresos superiores al stock disponible.
-- Historial de movimientos con filtros.
-- Exportación CSV de productos y movimientos.
+- Historial de movimientos con filtros por producto, operador, tipo u observación.
+- Exportación CSV de productos y movimientos, incluyendo operador responsable.
 - Configuración lista para Render.com con `render.yaml`, `Procfile`, `requirements.txt` y `gunicorn`.
+
+## Menú principal
+
+- **Dashboard:** resumen operativo, conclusiones y gráficos.
+- **Productos:** listado y registro de productos activos.
+- **Pistoleo:** ingreso o egreso por lector de código de barras.
+- **Operadores:** alta y desactivación de operadores del servicio.
+- **Movimientos:** historial trazable de ingresos y egresos.
+- **Productos CSV:** descarga el inventario actual.
+- **Movimientos CSV:** descarga el historial de movimientos.
+
+## Uso del pistoleo
+
+El lector debe estar configurado como teclado/HID y enviar **Enter** al terminar la lectura.
+
+### Para registrar producto nuevo
+
+1. Entra al Dashboard.
+2. En **Agregar producto activo**, haz clic en el campo **Código**.
+3. Pistolea el producto.
+4. El sistema valida el código:
+   - Si no existe, permite completar familia, descripción, talla, stock inicial y mínimo.
+   - Si existe, muestra el producto ya registrado para evitar duplicados.
+5. Guarda el producto.
+
+### Para ingresar o descontar stock
+
+1. Entra a **Pistoleo**.
+2. Selecciona **Ingreso** o **Egreso**.
+3. Indica cantidad por pistoleo.
+4. Selecciona el operador del servicio.
+5. Pistolea el código.
+6. El sistema reconoce el producto, actualiza stock y guarda el movimiento.
 
 ## Estructura
 
@@ -36,6 +80,8 @@ bodega_5400/
 └── templates/
     ├── base.html
     ├── index.html
+    ├── scanner.html
+    ├── operators.html
     └── movements.html
 ```
 
@@ -55,7 +101,6 @@ http://localhost:5000
 ```
 
 En local, si no existe `DATABASE_URL`, la aplicación usa SQLite automáticamente en `instance/bodega_5400.db`.
-
 
 ## Corrección importante para Render
 
@@ -79,10 +124,10 @@ Si Render ya había creado el servicio antes de agregar esta variable o el archi
 ### Opción B: Web Service manual
 
 1. Crea una base PostgreSQL en Render.
-2. Crea un Web Service desde el repositorio.
+2. Crea un Web Service desde tu repositorio.
 3. Usa:
 
-```bash
+```text
 Build Command: pip install -r requirements.txt
 Start Command: gunicorn app:app
 ```
@@ -90,38 +135,11 @@ Start Command: gunicorn app:app
 4. Agrega variables de entorno:
 
 ```text
+DATABASE_URL=<connection string de PostgreSQL>
+SECRET_KEY=<clave segura>
 PYTHON_VERSION=3.11.9
-SECRET_KEY=una-clave-segura
-DATABASE_URL=<connection string de PostgreSQL en Render>
 ```
 
-La app convierte automáticamente URLs `postgres://` a `postgresql://`, por compatibilidad con SQLAlchemy.
+## Nota sobre actualización desde una versión anterior
 
-## Campos del producto
-
-- Familia
-- Código
-- Descripción
-- Talla
-- Stock
-- Stock mínimo
-- Activo/Inactivo
-
-## Nota de persistencia
-
-Para Render se recomienda usar PostgreSQL mediante `DATABASE_URL`. SQLite funciona para pruebas locales, pero no es lo recomendable para producción en servicios efímeros.
-
-## Pistoleo de productos
-
-La versión actual incluye la opción **Pistoleo** en el menú superior.
-
-Funcionamiento:
-
-1. Abrir **Pistoleo**.
-2. Seleccionar modo **Ingreso** o **Egreso**.
-3. Definir la **cantidad por pistoleo**. Por defecto es 1.
-4. Pistolear el código del producto.
-5. El sistema busca el producto activo por `codigo` y registra automáticamente el movimiento.
-6. Si el código no existe o el egreso supera el stock disponible, el sistema rechaza el movimiento y muestra la alerta en pantalla.
-
-Para lectores de código de barras físicos, configurar el lector como modo teclado / HID y con sufijo **Enter** al finalizar la lectura.
+El archivo `app.py` incluye una migración ligera para agregar la columna `operator_id` a la tabla `movements` si la base ya existía. También corrige códigos semilla antiguos que quedaron sin ceros intermedios.

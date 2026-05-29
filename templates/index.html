@@ -2,36 +2,102 @@
 {% block content %}
 <section class="hero card-soft">
     <div>
-        <p class="eyebrow">▦ Control operativo</p>
-        <h1>Dotación de bodega</h1>
-        <p class="subtitle">Registro de productos activos, ingresos, egresos y stock disponible.</p>
+        <p class="eyebrow">▦ Reporte operativo</p>
+        <h1>Control de inventario por bodega</h1>
+        <p class="subtitle">Registro de productos activos, ingresos, egresos, operadores y stock disponible.</p>
     </div>
     <div class="hero-actions">
-        <a class="btn green" href="{{ url_for('export_products_csv') }}">⇩ Exportar productos</a>
-        <a class="btn outline-green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos</a>
+        <a class="btn green" href="{{ url_for('export_products_csv') }}">⇩ Exportar inventario</a>
+        <a class="btn outline-green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos CSV</a>
     </div>
 </section>
 
-<section class="stats-grid">
-    <article class="stat-card">
+<section class="quick-filter card-flat">
+    <form class="filter-form wide" method="get" action="{{ url_for('index') }}">
+        <label>Buscar
+            <input type="search" name="q" placeholder="Código, descripción, familia o talla" value="{{ search }}">
+        </label>
+        <label>Estado stock
+            <select name="stock">
+                <option value="todos" {% if stock_filter == 'todos' %}selected{% endif %}>Todos</option>
+                <option value="disponible" {% if stock_filter == 'disponible' %}selected{% endif %}>Con stock</option>
+                <option value="sin-stock" {% if stock_filter == 'sin-stock' %}selected{% endif %}>Sin stock</option>
+                <option value="bajo" {% if stock_filter == 'bajo' %}selected{% endif %}>Stock bajo</option>
+            </select>
+        </label>
+        <button class="btn red" type="submit">⟳ Generar</button>
+    </form>
+</section>
+
+<section class="stats-grid dashboard-stats">
+    <article class="stat-card accent-red">
         <span>Productos activos</span>
         <strong>{{ total_productos }}</strong>
+        <small>Registros disponibles</small>
     </article>
-    <article class="stat-card">
+    <article class="stat-card accent-blue">
         <span>Stock total</span>
         <strong>{{ total_stock }}</strong>
+        <small>Unidades en bodega</small>
     </article>
-    <article class="stat-card danger">
+    <article class="stat-card accent-orange">
+        <span>Bajo mínimo</span>
+        <strong>{{ stock_bajo }}</strong>
+        <small>Requieren reposición</small>
+    </article>
+    <article class="stat-card accent-red-soft">
         <span>Sin stock</span>
         <strong>{{ sin_stock }}</strong>
+        <small>Reposición crítica</small>
     </article>
-    <article class="stat-card warn">
-        <span>Stock bajo</span>
-        <strong>{{ stock_bajo }}</strong>
+    <article class="stat-card accent-green">
+        <span>Movimientos hoy</span>
+        <strong>{{ movimientos_hoy }}</strong>
+        <small>Ingresos y egresos</small>
     </article>
-    <article class="stat-card">
-        <span>Movimientos 7 días</span>
-        <strong>{{ movimientos_semana }}</strong>
+</section>
+
+<section class="panel conclusions-panel">
+    <div class="panel-header compact">
+        <div>
+            <p class="eyebrow">◇ Conclusiones automáticas</p>
+            <h2>Lectura rápida del inventario</h2>
+        </div>
+        <div class="mini-metrics">
+            <span><strong>{{ ingresos_semana }}</strong> ingresos 7 días</span>
+            <span><strong>{{ egresos_semana }}</strong> egresos 7 días</span>
+        </div>
+    </div>
+    <div class="conclusion-grid">
+        {% for conclusion in conclusions %}
+            <p>• {{ conclusion }}</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="analytics-grid">
+    <article class="panel chart-panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">↗ Tendencia de movimientos</p>
+                <h2>Ingresos vs egresos últimos 14 días</h2>
+            </div>
+            <div class="legend">
+                <span class="legend-ingreso">Ingresos</span>
+                <span class="legend-egreso">Egresos</span>
+            </div>
+        </div>
+        <canvas id="trendChart" height="220" aria-label="Gráfico de tendencia de ingresos y egresos"></canvas>
+    </article>
+
+    <article class="panel chart-panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">▥ Stock por familia</p>
+                <h2>Distribución de stock activo</h2>
+            </div>
+        </div>
+        <canvas id="familyChart" height="220" aria-label="Gráfico de stock por familia"></canvas>
     </article>
 </section>
 
@@ -40,18 +106,13 @@
         <div class="panel-header">
             <div>
                 <p class="eyebrow">Bodega 5400</p>
-                <h2>Productos activos</h2>
+                <h2>Productos activos en bodega</h2>
+                <p class="subtitle small-subtitle">Usa el campo código para pistolear productos existentes o registrar uno nuevo sin duplicarlo.</p>
             </div>
-            <form class="filter-form" method="get" action="{{ url_for('index') }}">
-                <input type="search" name="q" placeholder="Buscar código, descripción, familia..." value="{{ search }}">
-                <select name="stock">
-                    <option value="todos" {% if stock_filter == 'todos' %}selected{% endif %}>Todos</option>
-                    <option value="disponible" {% if stock_filter == 'disponible' %}selected{% endif %}>Con stock</option>
-                    <option value="sin-stock" {% if stock_filter == 'sin-stock' %}selected{% endif %}>Sin stock</option>
-                    <option value="bajo" {% if stock_filter == 'bajo' %}selected{% endif %}>Stock bajo</option>
-                </select>
-                <button class="btn red" type="submit">Generar</button>
-            </form>
+            <div class="hero-actions">
+                <a class="btn outline-green" href="{{ url_for('scanner') }}">▣ Ir a pistoleo</a>
+                <a class="btn outline-green" href="{{ url_for('operators') }}">♙ Operadores</a>
+            </div>
         </div>
 
         <div class="table-wrap">
@@ -102,11 +163,12 @@
         </div>
     </section>
 
-    <aside class="panel">
+    <aside class="panel" id="nuevo-producto">
         <div class="panel-header single">
             <div>
                 <p class="eyebrow">Nuevo registro</p>
                 <h2>Agregar producto activo</h2>
+                <p class="subtitle small-subtitle">Haz clic en Código y pistolea. Si ya existe, el sistema lo reconocerá.</p>
             </div>
         </div>
         <form class="stack-form" method="post" action="{{ url_for('add_product') }}">
@@ -114,8 +176,11 @@
                 <input name="familia" placeholder="Ej: Guantes" required>
             </label>
             <label>Código
-                <input name="codigo" placeholder="Ej: 5010130006010" required>
+                <input id="newProductCode" name="codigo" placeholder="Pistolea o escribe el código" required data-lookup-url="{{ url_for('api_product_lookup') }}" autocomplete="off">
             </label>
+            <div id="productLookupResult" class="lookup-result muted-box">
+                Esperando código. Puedes pistolear directamente en el campo.
+            </div>
             <label>Descripción
                 <input name="descripcion" placeholder="Descripción del producto" required>
             </label>
@@ -139,8 +204,8 @@
                 {% for mov in movimientos_recientes %}
                 <li>
                     <span class="move-type {{ mov.tipo }}">{{ mov.tipo }}</span>
-                    <span>{{ mov.producto.codigo }} · {{ mov.cantidad }}</span>
-                    <small>{{ mov.created_at|fecha }}</small>
+                    <span>{{ mov.producto.codigo }} · {{ mov.cantidad }} unidades</span>
+                    <small>{{ mov.responsable_visible }} · {{ mov.created_at|fecha }}</small>
                 </li>
                 {% else %}
                 <li class="empty-list">Sin movimientos registrados.</li>
@@ -166,14 +231,34 @@
             <label>Cantidad
                 <input name="cantidad" type="number" min="1" step="1" required>
             </label>
-            <label>Responsable
-                <input name="responsable" placeholder="Nombre responsable / turno">
+            <label>Operador del servicio
+                <select name="operator_id">
+                    <option value="">Seleccionar operador</option>
+                    {% for operador in operadores %}
+                        <option value="{{ operador.id }}">{{ operador.etiqueta }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Responsable manual / respaldo
+                <input name="responsable" placeholder="Usar solo si el operador no está creado">
             </label>
             <label>Observación
                 <textarea name="observacion" rows="3" placeholder="Orden, área, motivo o comentario"></textarea>
             </label>
             <button class="btn red full" type="submit">Guardar movimiento</button>
+            {% if not operadores %}
+                <a class="btn outline-green full" href="{{ url_for('operators') }}">Crear operador primero</a>
+            {% endif %}
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.BODEGA_CHARTS = {
+        trend: {{ trend_chart|tojson }},
+        family: {{ family_chart|tojson }}
+    };
+</script>
 {% endblock %}

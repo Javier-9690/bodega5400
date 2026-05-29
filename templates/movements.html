@@ -2,45 +2,45 @@
 {% block content %}
 <section class="hero card-soft">
     <div>
-        <p class="eyebrow">Historial operativo</p>
-        <h1>Movimientos de bodega</h1>
-        <p class="subtitle">Consulta de ingresos y egresos registrados. Se muestran los últimos 250 movimientos filtrados.</p>
+        <p class="eyebrow">↕ Trazabilidad</p>
+        <h1>Movimientos de inventario</h1>
+        <p class="subtitle">Historial de ingresos y egresos con producto, cantidad, stock y operador responsable.</p>
     </div>
     <div class="hero-actions">
-        <a class="btn green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos</a>
-        <a class="btn outline-green" href="{{ url_for('index') }}">Volver al dashboard</a>
+        <a class="btn green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos CSV</a>
+        <a class="btn outline-green" href="{{ url_for('scanner') }}">▣ Registrar por pistoleo</a>
     </div>
 </section>
 
 <section class="panel">
     <div class="panel-header">
         <div>
-            <p class="eyebrow">Trazabilidad</p>
-            <h2>Historial</h2>
+            <p class="eyebrow">Filtros</p>
+            <h2>Buscar movimientos</h2>
         </div>
         <form class="filter-form" method="get" action="{{ url_for('movements') }}">
-            <input type="search" name="q" placeholder="Buscar código, descripción, responsable..." value="{{ search }}">
+            <input type="search" name="q" placeholder="Código, producto, familia, operador u observación" value="{{ search }}">
             <select name="tipo">
                 <option value="todos" {% if tipo == 'todos' %}selected{% endif %}>Todos</option>
                 <option value="ingreso" {% if tipo == 'ingreso' %}selected{% endif %}>Ingresos</option>
                 <option value="egreso" {% if tipo == 'egreso' %}selected{% endif %}>Egresos</option>
             </select>
-            <button class="btn red" type="submit">Generar</button>
+            <button class="btn red" type="submit">Filtrar</button>
         </form>
     </div>
+
     <div class="table-wrap">
         <table>
             <thead>
                 <tr>
                     <th>Fecha</th>
                     <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Stock ant.</th>
+                    <th>Stock nuevo</th>
                     <th>Código</th>
                     <th>Descripción</th>
-                    <th>Talla</th>
-                    <th>Cantidad</th>
-                    <th>Stock anterior</th>
-                    <th>Stock nuevo</th>
-                    <th>Responsable</th>
+                    <th>Operador</th>
                     <th>Observación</th>
                 </tr>
             </thead>
@@ -49,18 +49,17 @@
                 <tr>
                     <td>{{ mov.created_at|fecha }}</td>
                     <td><span class="move-type {{ mov.tipo }}">{{ mov.tipo }}</span></td>
-                    <td class="mono">{{ mov.producto.codigo }}</td>
-                    <td>{{ mov.producto.descripcion }}</td>
-                    <td>{{ mov.producto.talla or '—' }}</td>
                     <td>{{ mov.cantidad }}</td>
                     <td>{{ mov.stock_anterior }}</td>
-                    <td>{{ mov.stock_nuevo }}</td>
-                    <td>{{ mov.responsable or '—' }}</td>
+                    <td class="stock-number">{{ mov.stock_nuevo }}</td>
+                    <td class="mono">{{ mov.producto.codigo }}</td>
+                    <td>{{ mov.producto.descripcion }} {{ mov.producto.talla or '' }}</td>
+                    <td>{{ mov.responsable_visible }}</td>
                     <td>{{ mov.observacion or '—' }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="10" class="empty">No hay movimientos para los filtros seleccionados.</td>
+                    <td colspan="9" class="empty">No hay movimientos que coincidan con los filtros.</td>
                 </tr>
                 {% endfor %}
             </tbody>
