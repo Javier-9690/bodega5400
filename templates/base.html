@@ -20,17 +20,20 @@
         </div>
     </header>
 
+    {% if current_user %}
     <nav class="navline">
         <a href="{{ url_for('index') }}">▦ Dashboard</a>
         <a href="{{ url_for('index') }}#productos">▤ Productos</a>
         <a href="{{ url_for('scanner') }}">▣ Pistoleo</a>
         <a href="{{ url_for('operators') }}">♙ Operadores</a>
         <a href="{{ url_for('movements') }}">↕ Movimientos</a>
-        <a href="{{ url_for('export_products_csv') }}">⇩ Productos CSV</a>
-        <a href="{{ url_for('export_movements_csv') }}">⇩ Movimientos CSV</a>
+        <span class="nav-user">{{ current_user.username }}</span>
+        <a href="{{ url_for('change_password') }}">⚿ Cambiar clave</a>
+        <a href="{{ url_for('logout') }}">↪ Salir</a>
     </nav>
+    {% endif %}
 
-    <main class="page">
+    <main class="page {% if not current_user %}auth-page{% endif %}">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <section class="alerts">

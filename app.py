@@ -4,12 +4,37 @@ import os
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from flask import Flask, Response, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, or_, text
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 db = SQLAlchemy()
+
+
+DEFAULT_USERS = [
+    {"username": "Ignacio Pino", "password": "Ignacio2026"},
+    {"username": "Jorge Apaz", "password": "Jorge2026"},
+]
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    activo = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password or "")
 
 
 class Product(db.Model):
@@ -103,8 +128,27 @@ def create_app():
         seed_initial_products()
         normalize_existing_product_codes()
         normalize_seed_codes()
+        seed_default_users()
+        seed_default_operators()
 
     return app
+
+
+def get_logged_user():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    return db.session.get(User, user_id)
+
+
+def find_operator_by_name(nombre):
+    nombre = str(nombre or "").strip()
+    if not nombre:
+        return None
+    return Operator.query.filter(
+        db.func.lower(Operator.nombre) == nombre.lower(),
+        Operator.activo == True,  # noqa: E712
+    ).first()
 
 
 def parse_positive_int(value, default=0):
@@ -203,6 +247,42 @@ def ensure_schema_updates():
                 conn.execute(text("ALTER TABLE movements ADD COLUMN operator_id INTEGER"))
 
 
+def seed_default_users():
+    """Crea los usuarios iniciales sin sobrescribir claves ya cambiadas."""
+    changed = False
+    for item in DEFAULT_USERS:
+        username = item["username"].strip()
+        existing = User.query.filter(db.func.lower(User.username) == username.lower()).first()
+        if existing:
+            if not existing.activo:
+                existing.activo = True
+                changed = True
+            continue
+        user = User(username=username, activo=True)
+        user.set_password(item["password"])
+        db.session.add(user)
+        changed = True
+    if changed:
+        db.session.commit()
+
+
+def seed_default_operators():
+    """Deja creados los usuarios autorizados como operadores activos para trazabilidad."""
+    changed = False
+    for item in DEFAULT_USERS:
+        nombre = item["username"].strip()
+        existing = Operator.query.filter(db.func.lower(Operator.nombre) == nombre.lower()).first()
+        if existing:
+            if not existing.activo:
+                existing.activo = True
+                changed = True
+            continue
+        db.session.add(Operator(nombre=nombre, cargo="Operador de bodega", turno="", activo=True))
+        changed = True
+    if changed:
+        db.session.commit()
+
+
 def seed_initial_products():
     if Product.query.count() > 0:
         return
@@ -269,12 +349,19 @@ def active_operators():
     return Operator.query.filter_by(activo=True).order_by(Operator.nombre.asc()).all()
 
 
-def resolve_operator_from_form(form):
+def resolve_operator_from_form(form, fallback_user=None):
     operator_id = parse_positive_int(form.get("operator_id"), 0)
     operator = None
     if operator_id > 0:
         operator = Operator.query.filter_by(id=operator_id, activo=True).first()
+
+    if not operator and fallback_user:
+        operator = find_operator_by_name(fallback_user.username)
+
     responsable_manual = str(form.get("responsable", "")).strip()
+    if not operator and not responsable_manual and fallback_user:
+        responsable_manual = fallback_user.username
+
     return operator, responsable_manual
 
 
@@ -390,6 +477,81 @@ def build_dashboard_data(productos_activos):
 
 
 def register_routes(app):
+    @app.context_processor
+    def inject_current_user():
+        return {"current_user": get_logged_user()}
+
+    @app.before_request
+    def require_login():
+        allowed_endpoints = {"login", "healthz", "static"}
+        if request.endpoint in allowed_endpoints or request.endpoint is None:
+            return None
+        user = get_logged_user()
+        if not user or not user.activo:
+            session.clear()
+            next_url = request.full_path if request.query_string else request.path
+            return redirect(url_for("login", next=next_url))
+        return None
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if get_logged_user():
+            return redirect(url_for("index"))
+
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            user = User.query.filter(db.func.lower(User.username) == username.lower()).first()
+
+            if not user or not user.activo or not user.check_password(password):
+                flash("Usuario o clave incorrectos.", "error")
+                return redirect(url_for("login"))
+
+            session.clear()
+            session["user_id"] = user.id
+            session["username"] = user.username
+            user.last_login_at = datetime.utcnow()
+            db.session.commit()
+
+            next_url = request.args.get("next") or url_for("index")
+            if not next_url.startswith("/") or next_url.startswith("//"):
+                next_url = url_for("index")
+            return redirect(next_url)
+
+        return render_template("login.html", title="Acceso | Bodega 5400")
+
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        flash("Sesión cerrada correctamente.", "success")
+        return redirect(url_for("login"))
+
+    @app.route("/cambiar-clave", methods=["GET", "POST"])
+    def change_password():
+        user = get_logged_user()
+        if request.method == "POST":
+            current_password = request.form.get("current_password", "")
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+
+            if not user.check_password(current_password):
+                flash("La clave actual no es correcta.", "error")
+                return redirect(url_for("change_password"))
+            if len(new_password) < 8:
+                flash("La nueva clave debe tener al menos 8 caracteres.", "error")
+                return redirect(url_for("change_password"))
+            if new_password != confirm_password:
+                flash("La confirmación no coincide con la nueva clave.", "error")
+                return redirect(url_for("change_password"))
+
+            user.set_password(new_password)
+            user.updated_at = datetime.utcnow()
+            db.session.commit()
+            flash("Clave actualizada correctamente.", "success")
+            return redirect(url_for("index"))
+
+        return render_template("change_password.html", title="Cambiar clave | Bodega 5400")
+
     @app.route("/healthz")
     def healthz():
         return {"status": "ok", "service": "Bodega 5400"}
@@ -499,7 +661,7 @@ def register_routes(app):
         tipo = request.form.get("tipo", "").strip().lower()
         cantidad = parse_positive_int(request.form.get("cantidad"), 0)
         observacion = request.form.get("observacion", "").strip()
-        operator, responsable_manual = resolve_operator_from_form(request.form)
+        operator, responsable_manual = resolve_operator_from_form(request.form, get_logged_user())
         responsable = operator.nombre if operator else responsable_manual
 
         if tipo not in {"ingreso", "egreso"}:
@@ -566,7 +728,7 @@ def register_routes(app):
         codigo = normalize_barcode(data.get("codigo", ""))
         tipo = str(data.get("tipo", "")).strip().lower()
         cantidad = parse_positive_int(data.get("cantidad"), 1)
-        operator, responsable_manual = resolve_operator_from_form(data)
+        operator, responsable_manual = resolve_operator_from_form(data, get_logged_user())
         responsable = operator.nombre if operator else responsable_manual
         observacion = str(data.get("observacion", "")).strip()
 

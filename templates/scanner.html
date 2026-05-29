@@ -55,7 +55,7 @@
                     <select id="scannerOperator" name="operator_id">
                         <option value="">Seleccionar operador</option>
                         {% for operador in operadores %}
-                            <option value="{{ operador.id }}">{{ operador.etiqueta }}</option>
+                            <option value="{{ operador.id }}" {% if current_user and operador.nombre|lower == current_user.username|lower %}selected{% endif %}>{{ operador.etiqueta }}</option>
                         {% endfor %}
                     </select>
                 </label>

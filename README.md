@@ -155,3 +155,17 @@ Esta versión normaliza los códigos leídos por pistola antes de buscarlos:
 - Compara contra códigos guardados aunque existan diferencias menores de formato.
 
 Esto permite que un código ya existente sea reconocido tanto en **Agregar producto activo** como en **Pistoleo**.
+
+## Actualización incluida
+
+Esta versión incorpora:
+
+- Acceso con usuario y clave.
+- Usuarios iniciales: Ignacio Pino / Ignacio2026 y Jorge Apaz / Jorge2026.
+- Cambio de clave desde el menú superior.
+- Descarga de productos CSV desde la sección Productos.
+- Descarga de movimientos CSV desde la sección Movimientos.
+- Eliminación de accesos CSV independientes en el menú principal.
+- Manual de usuario profesional en `MANUAL_USUARIO.md`.
+
+Después de subir a Render, usar **Manual Deploy → Clear build cache & deploy**.

@@ -7,8 +7,8 @@
         <p class="subtitle">Registro de productos activos, ingresos, egresos, operadores y stock disponible.</p>
     </div>
     <div class="hero-actions">
-        <a class="btn green" href="{{ url_for('export_products_csv') }}">⇩ Exportar inventario</a>
-        <a class="btn outline-green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos CSV</a>
+        <a class="btn green" href="{{ url_for('scanner') }}">▣ Registrar por pistoleo</a>
+        <a class="btn outline-green" href="{{ url_for('movements') }}">↕ Ver movimientos</a>
     </div>
 </section>
 
@@ -110,6 +110,7 @@
                 <p class="subtitle small-subtitle">Usa el campo código para pistolear productos existentes o registrar uno nuevo sin duplicarlo.</p>
             </div>
             <div class="hero-actions">
+                <a class="btn green" href="{{ url_for('export_products_csv') }}">⇩ Descargar productos CSV</a>
                 <a class="btn outline-green" href="{{ url_for('scanner') }}">▣ Ir a pistoleo</a>
                 <a class="btn outline-green" href="{{ url_for('operators') }}">♙ Operadores</a>
             </div>
@@ -235,7 +236,7 @@
                 <select name="operator_id">
                     <option value="">Seleccionar operador</option>
                     {% for operador in operadores %}
-                        <option value="{{ operador.id }}">{{ operador.etiqueta }}</option>
+                        <option value="{{ operador.id }}" {% if current_user and operador.nombre|lower == current_user.username|lower %}selected{% endif %}>{{ operador.etiqueta }}</option>
                     {% endfor %}
                 </select>
             </label>

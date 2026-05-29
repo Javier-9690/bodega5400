@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+    <article class="auth-card card-soft">
+        <p class="eyebrow">Acceso autorizado</p>
+        <h1>Ingreso a Bodega 5400</h1>
+        <p class="subtitle">Utiliza tu usuario y clave asignada para operar el inventario.</p>
+
+        <form method="post" class="stack-form auth-form" autocomplete="off">
+            <label>Usuario
+                <input name="username" placeholder="Ej: Ignacio Pino" required autofocus>
+            </label>
+            <label>Clave
+                <input name="password" type="password" placeholder="Clave de acceso" required>
+            </label>
+            <button class="btn red full" type="submit">Entrar al sistema</button>
+        </form>
+
+        <div class="muted-box auth-note">
+            Credenciales iniciales autorizadas: Ignacio Pino y Jorge Apaz. La clave puede cambiarse desde el menú superior después de ingresar.
+        </div>
+    </article>
+</section>
+{% endblock %}
