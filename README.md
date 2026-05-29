@@ -20,6 +20,8 @@ Sistema web en Python/Flask para controlar productos activos en bodega, registra
 ```text
 bodega_5400/
 ├── app.py
+├── .python-version
+├── runtime.txt
 ├── requirements.txt
 ├── Procfile
 ├── render.yaml
@@ -53,6 +55,17 @@ http://localhost:5000
 ```
 
 En local, si no existe `DATABASE_URL`, la aplicación usa SQLite automáticamente en `instance/bodega_5400.db`.
+
+
+## Corrección importante para Render
+
+El proyecto incluye `.python-version` con `3.11.9` para evitar que Render use Python 3.14 por defecto. En despliegues manuales, confirma también esta variable en **Environment**:
+
+```text
+PYTHON_VERSION=3.11.9
+```
+
+Si Render ya había creado el servicio antes de agregar esta variable o el archivo `.python-version`, ejecuta **Clear build cache & deploy** para que reconstruya el entorno virtual con Python 3.11.9.
 
 ## Despliegue en Render.com
 
