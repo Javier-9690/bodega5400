@@ -8,6 +8,19 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function normalizeBarcode(value) {
+    let code = String(value ?? '')
+        .replace(/\uFEFF/g, '')
+        .replace(/[\u200B-\u200D]/g, '')
+        .trim();
+
+    if (/^\d+\.0$/.test(code)) {
+        code = code.slice(0, -2);
+    }
+
+    return code.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+}
+
 function openMovementModal(button) {
     const modal = document.getElementById('movementModal');
     const form = document.getElementById('movementForm');
@@ -131,7 +144,7 @@ function setupScannerPage() {
         event.preventDefault();
         const formData = new FormData(form);
         const payload = {
-            codigo: String(formData.get('codigo') || '').trim(),
+            codigo: normalizeBarcode(formData.get('codigo')),
             tipo: String(formData.get('tipo') || '').trim(),
             cantidad: Number(formData.get('cantidad') || 1),
             operator_id: String(formData.get('operator_id') || '').trim(),
@@ -144,6 +157,7 @@ function setupScannerPage() {
             focusScanner();
             return;
         }
+        if (codeInput) codeInput.value = payload.codigo;
 
         try {
             const response = await fetch('/api/pistoleo', {
@@ -186,9 +200,10 @@ function setupScannerPage() {
 }
 
 async function lookupProductCode(input, resultBox) {
-    const codigo = String(input.value || '').trim();
+    const codigo = normalizeBarcode(input.value);
     const baseUrl = input.dataset.lookupUrl;
     if (!codigo || !baseUrl || !resultBox) return;
+    input.value = codigo;
 
     resultBox.className = 'lookup-result muted-box loading';
     resultBox.textContent = 'Validando código pistoleado...';

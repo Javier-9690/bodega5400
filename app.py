@@ -101,6 +101,7 @@ def create_app():
         db.create_all()
         ensure_schema_updates()
         seed_initial_products()
+        normalize_existing_product_codes()
         normalize_seed_codes()
 
     return app
@@ -112,6 +113,75 @@ def parse_positive_int(value, default=0):
     except (TypeError, ValueError):
         return default
     return number if number >= 0 else default
+
+
+def normalize_barcode(value):
+    """Normaliza códigos leídos por pistola o escritos manualmente.
+
+    Muchos lectores de código de barra trabajan como teclado y pueden enviar
+    espacios, tabuladores, Enter, caracteres invisibles o separadores. Además,
+    cuando un código viene desde Excel puede llegar como texto terminado en .0.
+    Para reconocer productos existentes, comparamos contra una versión limpia
+    compuesta por letras y números en mayúscula.
+    """
+    text_value = str(value or "")
+    text_value = (
+        text_value.replace("\ufeff", "")
+        .replace("\u200b", "")
+        .replace("\u200c", "")
+        .replace("\u200d", "")
+        .strip()
+    )
+    if text_value.endswith(".0") and text_value[:-2].replace(".", "", 1).isdigit():
+        text_value = text_value[:-2]
+    return "".join(character for character in text_value if character.isalnum()).upper()
+
+
+def find_product_by_barcode(codigo, active_only=None):
+    """Busca un producto por código exacto o por código normalizado."""
+    raw_code = str(codigo or "").strip()
+    clean_code = normalize_barcode(raw_code)
+    if not clean_code:
+        return None
+
+    query = Product.query
+    if active_only is not None:
+        query = query.filter_by(activo=active_only)
+
+    product = query.filter_by(codigo=raw_code).first()
+    if product:
+        return product
+
+    product = query.filter(db.func.upper(Product.codigo) == clean_code).first()
+    if product:
+        return product
+
+    for candidate in query.all():
+        if normalize_barcode(candidate.codigo) == clean_code:
+            return candidate
+
+    return None
+
+
+def normalize_existing_product_codes():
+    """Limpia códigos ya guardados cuando no genera conflicto de unicidad."""
+    products = Product.query.all()
+    existing_codes = {product.codigo for product in products}
+    changed = False
+
+    for product in products:
+        clean_code = normalize_barcode(product.codigo)
+        if not clean_code or clean_code == product.codigo:
+            continue
+        if clean_code in existing_codes:
+            continue
+        existing_codes.discard(product.codigo)
+        product.codigo = clean_code
+        existing_codes.add(clean_code)
+        changed = True
+
+    if changed:
+        db.session.commit()
 
 
 def ensure_schema_updates():
@@ -152,7 +222,7 @@ def seed_initial_products():
         ("Guantes", "50103000000008", "Guantes ninja negro", "M", 0),
         ("Guantes", "50103000000009", "Guantes ninja negro", "L", 0),
         ("Guantes", "50103000000010", "Guantes ninja negro", "XL", 0),
-        ("Guantes", "5010930089000", "Ninja Razar (manguilla Kevlar amarilla)", "Única", 0),
+        ("Guantes", "50109300089000", "Ninja Razar (manguilla Kevlar amarilla)", "Única", 0),
     ]
 
     for familia, codigo, descripcion, talla, stock in initial_products:
@@ -182,6 +252,8 @@ def normalize_seed_codes():
         "5010300000008": "50103000000008",
         "5010300000009": "50103000000009",
         "5010300000010": "50103000000010",
+        "5010930089000": "50109300089000",
+        "5010930008900": "50109300089000",
     }
     changed = False
     for old_code, new_code in corrections.items():
@@ -366,7 +438,7 @@ def register_routes(app):
     @app.route("/productos", methods=["POST"])
     def add_product():
         familia = request.form.get("familia", "").strip()
-        codigo = request.form.get("codigo", "").strip()
+        codigo = normalize_barcode(request.form.get("codigo", ""))
         descripcion = request.form.get("descripcion", "").strip()
         talla = request.form.get("talla", "").strip().upper()
         stock = parse_positive_int(request.form.get("stock"), 0)
@@ -376,7 +448,7 @@ def register_routes(app):
             flash("Familia, código y descripción son obligatorios.", "error")
             return redirect(url_for("index", _anchor="nuevo-producto"))
 
-        existing = Product.query.filter_by(codigo=codigo).first()
+        existing = find_product_by_barcode(codigo)
         if existing and existing.activo:
             flash(
                 f"El código ya existe: {existing.descripcion} {existing.talla or ''}. No se duplicó el producto.",
@@ -462,11 +534,11 @@ def register_routes(app):
 
     @app.route("/api/productos/lookup")
     def api_product_lookup():
-        codigo = request.args.get("codigo", "").strip()
+        codigo = normalize_barcode(request.args.get("codigo", ""))
         if not codigo:
             return jsonify(ok=False, message="Código vacío."), 400
 
-        product = Product.query.filter_by(codigo=codigo).first()
+        product = find_product_by_barcode(codigo)
         if not product:
             return jsonify(ok=True, exists=False, codigo=codigo, message="Código disponible para registrar producto nuevo.")
 
@@ -491,7 +563,7 @@ def register_routes(app):
     @app.route("/api/pistoleo", methods=["POST"])
     def api_scanner_movement():
         data = request.get_json(silent=True) or request.form
-        codigo = str(data.get("codigo", "")).strip()
+        codigo = normalize_barcode(data.get("codigo", ""))
         tipo = str(data.get("tipo", "")).strip().lower()
         cantidad = parse_positive_int(data.get("cantidad"), 1)
         operator, responsable_manual = resolve_operator_from_form(data)
@@ -507,7 +579,7 @@ def register_routes(app):
         if not responsable:
             return jsonify(ok=False, message="Selecciona o escribe el operador responsable."), 400
 
-        product = Product.query.filter_by(codigo=codigo, activo=True).first()
+        product = find_product_by_barcode(codigo, active_only=True)
         if not product:
             return jsonify(
                 ok=False,

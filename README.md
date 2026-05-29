@@ -143,3 +143,15 @@ PYTHON_VERSION=3.11.9
 ## Nota sobre actualización desde una versión anterior
 
 El archivo `app.py` incluye una migración ligera para agregar la columna `operator_id` a la tabla `movements` si la base ya existía. También corrige códigos semilla antiguos que quedaron sin ceros intermedios.
+
+## Ajuste de reconocimiento de códigos
+
+Esta versión normaliza los códigos leídos por pistola antes de buscarlos:
+
+- Elimina espacios, Enter, tabuladores y caracteres invisibles.
+- Quita separadores agregados accidentalmente por el lector.
+- Convierte letras a mayúscula.
+- Corrige códigos que llegan desde Excel con terminación `.0`.
+- Compara contra códigos guardados aunque existan diferencias menores de formato.
+
+Esto permite que un código ya existente sea reconocido tanto en **Agregar producto activo** como en **Pistoleo**.
