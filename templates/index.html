@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero card-soft">
+    <div>
+        <p class="eyebrow">▦ Control operativo</p>
+        <h1>Dotación de bodega</h1>
+        <p class="subtitle">Registro de productos activos, ingresos, egresos y stock disponible.</p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn green" href="{{ url_for('export_products_csv') }}">⇩ Exportar productos</a>
+        <a class="btn outline-green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos</a>
+    </div>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <span>Productos activos</span>
+        <strong>{{ total_productos }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Stock total</span>
+        <strong>{{ total_stock }}</strong>
+    </article>
+    <article class="stat-card danger">
+        <span>Sin stock</span>
+        <strong>{{ sin_stock }}</strong>
+    </article>
+    <article class="stat-card warn">
+        <span>Stock bajo</span>
+        <strong>{{ stock_bajo }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Movimientos 7 días</span>
+        <strong>{{ movimientos_semana }}</strong>
+    </article>
+</section>
+
+<section class="grid-layout">
+    <section id="productos" class="panel panel-wide">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Bodega 5400</p>
+                <h2>Productos activos</h2>
+            </div>
+            <form class="filter-form" method="get" action="{{ url_for('index') }}">
+                <input type="search" name="q" placeholder="Buscar código, descripción, familia..." value="{{ search }}">
+                <select name="stock">
+                    <option value="todos" {% if stock_filter == 'todos' %}selected{% endif %}>Todos</option>
+                    <option value="disponible" {% if stock_filter == 'disponible' %}selected{% endif %}>Con stock</option>
+                    <option value="sin-stock" {% if stock_filter == 'sin-stock' %}selected{% endif %}>Sin stock</option>
+                    <option value="bajo" {% if stock_filter == 'bajo' %}selected{% endif %}>Stock bajo</option>
+                </select>
+                <button class="btn red" type="submit">Generar</button>
+            </form>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Familia</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Talla</th>
+                        <th>Stock</th>
+                        <th>Mín.</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                    <tr>
+                        <td>{{ producto.familia }}</td>
+                        <td class="mono">{{ producto.codigo }}</td>
+                        <td>{{ producto.descripcion }}</td>
+                        <td>{{ producto.talla or '—' }}</td>
+                        <td class="stock-number">{{ producto.stock }}</td>
+                        <td>{{ producto.stock_minimo }}</td>
+                        <td><span class="badge {{ producto.estado_stock }}">{{ producto.estado_stock|replace('-', ' ') }}</span></td>
+                        <td class="actions">
+                            <button
+                                class="btn small green"
+                                type="button"
+                                data-url="{{ url_for('register_movement', product_id=producto.id) }}"
+                                data-label="{{ producto.codigo }} · {{ producto.descripcion }} · {{ producto.talla or 'Sin talla' }}"
+                                onclick="openMovementModal(this)">
+                                ↕ Movimiento
+                            </button>
+                            <form method="post" action="{{ url_for('delete_product', product_id=producto.id) }}" onsubmit="return confirmDelete('{{ producto.codigo }}');">
+                                <button class="btn small ghost-red" type="submit">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty">No hay productos activos que coincidan con el filtro.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <aside class="panel">
+        <div class="panel-header single">
+            <div>
+                <p class="eyebrow">Nuevo registro</p>
+                <h2>Agregar producto activo</h2>
+            </div>
+        </div>
+        <form class="stack-form" method="post" action="{{ url_for('add_product') }}">
+            <label>Familia
+                <input name="familia" placeholder="Ej: Guantes" required>
+            </label>
+            <label>Código
+                <input name="codigo" placeholder="Ej: 5010130006010" required>
+            </label>
+            <label>Descripción
+                <input name="descripcion" placeholder="Descripción del producto" required>
+            </label>
+            <div class="two-cols">
+                <label>Talla
+                    <input name="talla" placeholder="XS, S, M, L, XL">
+                </label>
+                <label>Stock inicial
+                    <input name="stock" type="number" min="0" value="0">
+                </label>
+            </div>
+            <label>Stock mínimo
+                <input name="stock_minimo" type="number" min="0" value="0">
+            </label>
+            <button class="btn red full" type="submit">＋ Agregar producto</button>
+        </form>
+
+        <div class="recent-box">
+            <h3>Últimos movimientos</h3>
+            <ul>
+                {% for mov in movimientos_recientes %}
+                <li>
+                    <span class="move-type {{ mov.tipo }}">{{ mov.tipo }}</span>
+                    <span>{{ mov.producto.codigo }} · {{ mov.cantidad }}</span>
+                    <small>{{ mov.created_at|fecha }}</small>
+                </li>
+                {% else %}
+                <li class="empty-list">Sin movimientos registrados.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </aside>
+</section>
+
+<div class="modal-backdrop" id="movementModal" aria-hidden="true">
+    <div class="modal-card">
+        <button class="modal-close" type="button" onclick="closeMovementModal()">×</button>
+        <p class="eyebrow">Ingreso / egreso</p>
+        <h2>Registrar movimiento</h2>
+        <p class="modal-product" id="movementProductLabel"></p>
+        <form id="movementForm" method="post" class="stack-form">
+            <label>Tipo
+                <select name="tipo" required>
+                    <option value="ingreso">Ingreso</option>
+                    <option value="egreso">Egreso</option>
+                </select>
+            </label>
+            <label>Cantidad
+                <input name="cantidad" type="number" min="1" step="1" required>
+            </label>
+            <label>Responsable
+                <input name="responsable" placeholder="Nombre responsable / turno">
+            </label>
+            <label>Observación
+                <textarea name="observacion" rows="3" placeholder="Orden, área, motivo o comentario"></textarea>
+            </label>
+            <button class="btn red full" type="submit">Guardar movimiento</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

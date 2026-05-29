@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero card-soft">
+    <div>
+        <p class="eyebrow">Historial operativo</p>
+        <h1>Movimientos de bodega</h1>
+        <p class="subtitle">Consulta de ingresos y egresos registrados. Se muestran los últimos 250 movimientos filtrados.</p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn green" href="{{ url_for('export_movements_csv') }}">⇩ Exportar movimientos</a>
+        <a class="btn outline-green" href="{{ url_for('index') }}">Volver al dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Trazabilidad</p>
+            <h2>Historial</h2>
+        </div>
+        <form class="filter-form" method="get" action="{{ url_for('movements') }}">
+            <input type="search" name="q" placeholder="Buscar código, descripción, responsable..." value="{{ search }}">
+            <select name="tipo">
+                <option value="todos" {% if tipo == 'todos' %}selected{% endif %}>Todos</option>
+                <option value="ingreso" {% if tipo == 'ingreso' %}selected{% endif %}>Ingresos</option>
+                <option value="egreso" {% if tipo == 'egreso' %}selected{% endif %}>Egresos</option>
+            </select>
+            <button class="btn red" type="submit">Generar</button>
+        </form>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Talla</th>
+                    <th>Cantidad</th>
+                    <th>Stock anterior</th>
+                    <th>Stock nuevo</th>
+                    <th>Responsable</th>
+                    <th>Observación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mov in movimientos %}
+                <tr>
+                    <td>{{ mov.created_at|fecha }}</td>
+                    <td><span class="move-type {{ mov.tipo }}">{{ mov.tipo }}</span></td>
+                    <td class="mono">{{ mov.producto.codigo }}</td>
+                    <td>{{ mov.producto.descripcion }}</td>
+                    <td>{{ mov.producto.talla or '—' }}</td>
+                    <td>{{ mov.cantidad }}</td>
+                    <td>{{ mov.stock_anterior }}</td>
+                    <td>{{ mov.stock_nuevo }}</td>
+                    <td>{{ mov.responsable or '—' }}</td>
+                    <td>{{ mov.observacion or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" class="empty">No hay movimientos para los filtros seleccionados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or 'Bodega 5400' }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-left">
+            <img src="{{ url_for('static', filename='img/aramark.png') }}" alt="Aramark" class="logo-aramark">
+        </div>
+        <div class="system-title">
+            <span class="title-icon">▣</span>
+            <strong>Bodega 5400</strong>
+        </div>
+        <div class="brand-right">
+            <img src="{{ url_for('static', filename='img/escondida_bhp.png') }}" alt="Escondida BHP" class="logo-escondida">
+        </div>
+    </header>
+
+    <nav class="navline">
+        <a href="{{ url_for('index') }}">▦ Dashboard</a>
+        <a href="{{ url_for('index') }}#productos">▤ Productos</a>
+        <a href="{{ url_for('movements') }}">↕ Movimientos</a>
+        <a href="{{ url_for('export_products_csv') }}">⇩ Productos CSV</a>
+        <a href="{{ url_for('export_movements_csv') }}">⇩ Movimientos CSV</a>
+    </nav>
+
+    <main class="page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="alerts">
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
