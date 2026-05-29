@@ -345,3 +345,118 @@ tbody tr:last-child td { border-bottom: 0; }
     .page { padding: 12px 8px 26px; }
     .panel, .hero { padding: 16px; }
 }
+
+/* Pistoleo de productos */
+.scanner-hero { align-items: stretch; }
+.scanner-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    gap: 12px;
+    min-width: min(420px, 100%);
+}
+.scanner-summary > div {
+    background: #fff;
+    border: 1px solid #f2d5c8;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 20px rgba(167, 15, 17, 0.06);
+}
+.scanner-summary span { display: block; color: var(--muted); font-weight: 800; font-size: 0.82rem; }
+.scanner-summary strong { display: block; margin-top: 6px; color: var(--red-dark); font-size: 1.8rem; }
+.scanner-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.scanner-panel { border-left: 6px solid var(--red); }
+.scanner-form { display: grid; gap: 16px; }
+.small-subtitle { font-size: 0.9rem; }
+.mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.mode-card {
+    cursor: pointer;
+    border: 2px solid #e4e7ec;
+    border-radius: 14px;
+    padding: 16px;
+    background: #fff;
+    display: grid;
+    gap: 4px;
+    transition: border 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+.mode-card:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(16, 24, 40, 0.08); }
+.mode-card input { display: none; }
+.mode-card span { font-size: 1.25rem; font-weight: 900; }
+.mode-card small { color: var(--muted); font-weight: 700; }
+.mode-card.ingreso.selected { border-color: #12b76a; background: #ecfdf3; }
+.mode-card.egreso.selected { border-color: #f04438; background: #fff1f3; }
+.scanner-input-box {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 12px;
+    align-items: end;
+}
+#scannerCode {
+    min-height: 58px;
+    font-size: 1.28rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    border-width: 2px;
+}
+#scannerCode.ready { border-color: var(--green); box-shadow: 0 0 0 4px rgba(5, 115, 63, 0.12); }
+.scanner-options { align-items: end; }
+.scanner-result-panel { border-left: 6px solid #d0d5dd; }
+.scanner-result {
+    margin-top: 16px;
+    min-height: 278px;
+    display: grid;
+    align-content: center;
+    gap: 10px;
+    border: 1px dashed #d0d5dd;
+    border-radius: 14px;
+    padding: 20px;
+    background: #fbfcfd;
+}
+.scanner-result.empty-state { text-align: center; color: var(--muted); }
+.scanner-icon { font-size: 2.5rem; color: var(--red); }
+.scanner-result.success { border-color: #a6f4c5; background: #ecfdf3; }
+.scanner-result.error { border-color: #fecdca; background: #fff1f3; }
+.scanner-product-title { font-size: 1.15rem; color: #111827; }
+.scanner-product-code { color: var(--muted); font-weight: 900; }
+.stock-change {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+.stock-box {
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+}
+.stock-box span { display: block; color: var(--muted); font-size: 0.76rem; font-weight: 800; text-transform: uppercase; }
+.stock-box strong { display: block; font-size: 1.7rem; color: var(--red-dark); }
+.stock-arrow { font-size: 1.5rem; font-weight: 900; color: var(--muted); }
+.scanner-status-line { margin: 6px 0 0; font-weight: 800; }
+.scanner-history-panel { margin-bottom: 28px; }
+.scanner-history-table .move-type { min-width: 78px; justify-content: center; }
+.row-flash-success { animation: flashSuccess 950ms ease; }
+.row-flash-error { animation: flashError 950ms ease; }
+@keyframes flashSuccess { 0% { background: #d1fadf; } 100% { background: transparent; } }
+@keyframes flashError { 0% { background: #ffe4e8; } 100% { background: transparent; } }
+
+@media (max-width: 980px) {
+    .scanner-layout { grid-template-columns: 1fr; }
+    .scanner-input-box { grid-template-columns: 1fr; }
+    .scanner-summary { min-width: 0; }
+}
+
+@media (max-width: 640px) {
+    .mode-toggle, .scanner-summary { grid-template-columns: 1fr; }
+}

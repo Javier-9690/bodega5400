@@ -3,7 +3,7 @@ import io
 import os
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, Response, flash, redirect, render_template, request, url_for
+from flask import Flask, Response, flash, jsonify, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
 
@@ -259,6 +259,97 @@ def register_routes(app):
         db.session.commit()
         flash("Movimiento registrado correctamente.", "success")
         return redirect(url_for("index"))
+
+
+    @app.route("/pistoleo")
+    def scanner():
+        productos_activos = Product.query.filter_by(activo=True).count()
+        total_stock = sum(p.stock for p in Product.query.filter_by(activo=True).all())
+        return render_template(
+            "scanner.html",
+            productos_activos=productos_activos,
+            total_stock=total_stock,
+        )
+
+    @app.route("/api/pistoleo", methods=["POST"])
+    def api_scanner_movement():
+        data = request.get_json(silent=True) or request.form
+        codigo = str(data.get("codigo", "")).strip()
+        tipo = str(data.get("tipo", "")).strip().lower()
+        cantidad = parse_positive_int(data.get("cantidad"), 1)
+        responsable = str(data.get("responsable", "")).strip()
+        observacion = str(data.get("observacion", "")).strip()
+
+        if not codigo:
+            return jsonify(ok=False, message="Debes pistolear o ingresar un código."), 400
+        if tipo not in {"ingreso", "egreso"}:
+            return jsonify(ok=False, message="Selecciona si el pistoleo será ingreso o egreso."), 400
+        if cantidad <= 0:
+            return jsonify(ok=False, message="La cantidad por pistoleo debe ser mayor que cero."), 400
+
+        product = Product.query.filter_by(codigo=codigo, activo=True).first()
+        if not product:
+            return jsonify(
+                ok=False,
+                code="not_found",
+                codigo=codigo,
+                message=f"Código {codigo} no encontrado en productos activos.",
+            ), 404
+
+        if tipo == "egreso" and cantidad > product.stock:
+            return jsonify(
+                ok=False,
+                code="insufficient_stock",
+                codigo=codigo,
+                product={
+                    "id": product.id,
+                    "familia": product.familia,
+                    "codigo": product.codigo,
+                    "descripcion": product.descripcion,
+                    "talla": product.talla,
+                    "stock": product.stock,
+                    "stock_minimo": product.stock_minimo,
+                    "estado_stock": product.estado_stock,
+                },
+                message=f"Egreso rechazado: stock disponible {product.stock}, cantidad solicitada {cantidad}.",
+            ), 409
+
+        stock_anterior = product.stock
+        product.stock = product.stock + cantidad if tipo == "ingreso" else product.stock - cantidad
+        movement = Movement(
+            product_id=product.id,
+            tipo=tipo,
+            cantidad=cantidad,
+            stock_anterior=stock_anterior,
+            stock_nuevo=product.stock,
+            observacion=observacion or "Movimiento registrado desde pistoleo",
+            responsable=responsable,
+        )
+        db.session.add(movement)
+        db.session.commit()
+
+        return jsonify(
+            ok=True,
+            message="Producto reconocido y movimiento registrado.",
+            movement={
+                "id": movement.id,
+                "tipo": movement.tipo,
+                "cantidad": movement.cantidad,
+                "stock_anterior": movement.stock_anterior,
+                "stock_nuevo": movement.stock_nuevo,
+                "fecha": movement.created_at.strftime("%d-%m-%Y %H:%M"),
+            },
+            product={
+                "id": product.id,
+                "familia": product.familia,
+                "codigo": product.codigo,
+                "descripcion": product.descripcion,
+                "talla": product.talla or "—",
+                "stock": product.stock,
+                "stock_minimo": product.stock_minimo,
+                "estado_stock": product.estado_stock,
+            },
+        )
 
     @app.route("/movimientos")
     def movements():

@@ -110,3 +110,18 @@ La app convierte automáticamente URLs `postgres://` a `postgresql://`, por comp
 ## Nota de persistencia
 
 Para Render se recomienda usar PostgreSQL mediante `DATABASE_URL`. SQLite funciona para pruebas locales, pero no es lo recomendable para producción en servicios efímeros.
+
+## Pistoleo de productos
+
+La versión actual incluye la opción **Pistoleo** en el menú superior.
+
+Funcionamiento:
+
+1. Abrir **Pistoleo**.
+2. Seleccionar modo **Ingreso** o **Egreso**.
+3. Definir la **cantidad por pistoleo**. Por defecto es 1.
+4. Pistolear el código del producto.
+5. El sistema busca el producto activo por `codigo` y registra automáticamente el movimiento.
+6. Si el código no existe o el egreso supera el stock disponible, el sistema rechaza el movimiento y muestra la alerta en pantalla.
+
+Para lectores de código de barras físicos, configurar el lector como modo teclado / HID y con sufijo **Enter** al finalizar la lectura.

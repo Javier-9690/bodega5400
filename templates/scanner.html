@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero card-soft scanner-hero">
+    <div>
+        <p class="eyebrow">▣ Pistoleo operativo</p>
+        <h1>Pistolear productos</h1>
+        <p class="subtitle">Escanea el código del producto para registrar ingresos o egresos automáticamente.</p>
+    </div>
+    <div class="scanner-summary">
+        <div>
+            <span>Productos activos</span>
+            <strong id="scannerProductosActivos">{{ productos_activos }}</strong>
+        </div>
+        <div>
+            <span>Stock total</span>
+            <strong id="scannerStockTotal">{{ total_stock }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="scanner-layout">
+    <article class="panel scanner-panel">
+        <div class="panel-header single">
+            <p class="eyebrow">Modo de captura</p>
+            <h2>Ingreso / egreso por código</h2>
+            <p class="subtitle small-subtitle">El lector debe estar configurado como teclado y enviar Enter al finalizar la lectura.</p>
+        </div>
+
+        <form id="scannerForm" class="scanner-form" autocomplete="off">
+            <div class="mode-toggle" role="radiogroup" aria-label="Tipo de movimiento">
+                <label class="mode-card ingreso selected" id="modeIngreso">
+                    <input type="radio" name="tipo" value="ingreso" checked>
+                    <span>↑ Ingreso</span>
+                    <small>Suma al stock</small>
+                </label>
+                <label class="mode-card egreso" id="modeEgreso">
+                    <input type="radio" name="tipo" value="egreso">
+                    <span>↓ Egreso</span>
+                    <small>Descuenta stock</small>
+                </label>
+            </div>
+
+            <div class="scanner-input-box">
+                <label>Código pistoleado
+                    <input id="scannerCode" name="codigo" inputmode="numeric" placeholder="Pistolea aquí o escribe el código" autofocus required>
+                </label>
+                <button class="btn red" type="submit">Registrar pistoleo</button>
+            </div>
+
+            <div class="two-cols scanner-options">
+                <label>Cantidad por pistoleo
+                    <input id="scannerQuantity" name="cantidad" type="number" min="1" step="1" value="1" required>
+                </label>
+                <label>Responsable / turno
+                    <input id="scannerResponsible" name="responsable" placeholder="Ej: Turno A / Juan Pérez">
+                </label>
+            </div>
+
+            <label>Observación opcional
+                <input id="scannerObservation" name="observacion" placeholder="Ej: entrega a área, reposición, OT, vale interno">
+            </label>
+        </form>
+    </article>
+
+    <aside class="panel scanner-result-panel" aria-live="polite">
+        <p class="eyebrow">Resultado</p>
+        <h2>Producto reconocido</h2>
+        <div id="scannerResult" class="scanner-result empty-state">
+            <div class="scanner-icon">▣</div>
+            <strong>Esperando lectura</strong>
+            <p>Pistolea un código para validar el producto y registrar el movimiento.</p>
+        </div>
+    </aside>
+</section>
+
+<section class="panel scanner-history-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Trazabilidad</p>
+            <h2>Últimos pistoleos de esta sesión</h2>
+        </div>
+        <button class="btn outline-green" type="button" id="clearScannerHistory">Limpiar lista</button>
+    </div>
+
+    <div class="table-wrap">
+        <table class="scanner-history-table">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Tipo</th>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Talla</th>
+                    <th>Cantidad</th>
+                    <th>Stock previo</th>
+                    <th>Stock nuevo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="scannerHistoryBody">
+                <tr>
+                    <td colspan="9" class="empty">Aún no hay pistoleos en esta sesión.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
